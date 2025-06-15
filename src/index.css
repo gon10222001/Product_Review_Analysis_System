@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  select, input {
+    @apply border-gray-500 rounded-md shadow-sm;
+  }
+}
+
+/* Prevent layout shift when scrollbar appears */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+/* スクロールバーのスタイル */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(203, 213, 225, 0.4);
+  border-radius: 20px;
+  border: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.6);
+}
+
+/* Firefoxのスクロールバー */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(203, 213, 225, 0.4) transparent;
+}

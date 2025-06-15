@@ -1,0 +1,18 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "devCommand": "vite",
+  "crons": [
+    {
+      "path": "/api/batch",
+      "schedule": "0 0 * * *"
+    }
+  ]
+} 
