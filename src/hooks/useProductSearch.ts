@@ -107,28 +107,9 @@ export const useProductSearch = () => {
     }
   }, [fetchUniqueValues]);
 
-  // Initialize filter options on mount and after navigation
+  // Initialize filter options on mount
   useEffect(() => {
     fetchFilterOptions();
-
-    // Add event listeners for page visibility and focus
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchFilterOptions();
-      }
-    };
-
-    const handleFocus = () => {
-      fetchFilterOptions();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, [fetchFilterOptions]);
 
   return {
