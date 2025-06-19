@@ -11,10 +11,6 @@
   "devCommand": "vite",
   "crons": [
     {
-      "path": "/api/batch",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/batch-schedule",
       "schedule": "0 0 * * *"
     }
