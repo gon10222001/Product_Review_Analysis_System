@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/batch-schedule",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 } 
