@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../src/lib/supabase';
 import { logger } from '../../src/lib/utils/logger';
-import { executeBatchProcess } from '../../src/lib/api/batch';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -16,52 +15,136 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // バッチ処理履歴を作成
-    const { data: history, error: historyError } = await supabase
-      .from('batch_execution_history')
-      .insert([{
-        started_at: new Date().toISOString(),
-        status: 'running'
-      }])
-      .select()
-      .single();
+    // 有効なスケジュールを取得
+    const { data: schedules, error: schedulesError } = await supabase
+      .from('batch_schedule')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
 
-    if (historyError) {
-      throw new Error(`Failed to create batch history: ${historyError.message}`);
+    if (schedulesError) {
+      throw new Error(`Failed to get schedules: ${schedulesError.message}`);
     }
 
-    // 即座にレスポンスを返して、バッチ処理を非同期で開始
+    if (!schedules || schedules.length === 0) {
+      return res.status(200).json({ 
+        success: true, 
+        message: '実行するスケジュールがありません' 
+      });
+    }
+
+    // 各スケジュールをチェックして実行
+    const results = [];
+    for (const schedule of schedules) {
+      try {
+        if (shouldExecuteSchedule(schedule.cron_expression)) {
+          // バッチ処理履歴を作成
+          const { data: history, error: historyError } = await supabase
+            .from('batch_execution_history')
+            .insert([{
+              started_at: new Date().toISOString(),
+              status: 'running'
+            }])
+            .select()
+            .single();
+
+          if (historyError) {
+            throw new Error(`Failed to create batch history: ${historyError.message}`);
+          }
+
+          // 非同期でバッチ処理を実行
+          executeBatchProcessAsync(history.id, schedule.id).catch(error => {
+            logger.error('Async batch process error:', error);
+          });
+
+          results.push({
+            schedule_id: schedule.id,
+            schedule_name: schedule.name,
+            execution_id: history.id,
+            status: 'started'
+          });
+        }
+      } catch (error) {
+        logger.error(`Schedule execution error for ${schedule.name}:`, error);
+        results.push({
+          schedule_id: schedule.id,
+          schedule_name: schedule.name,
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
     res.status(200).json({ 
       success: true, 
-      message: 'バッチ処理を開始しました',
-      execution_id: history.id
-    });
-
-    // 非同期でバッチ処理を実行
-    executeBatchProcessAsync(history.id).catch(error => {
-      logger.error('Async batch process error:', error);
+      message: 'スケジュールチェック完了',
+      results 
     });
 
   } catch (error) {
-    console.error('Batch process error:', error);
+    console.error('Batch schedule error:', error);
     res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'バッチ処理の実行中にエラーが発生しました。'
+      error: error instanceof Error ? error.message : 'スケジュール実行中にエラーが発生しました。'
     });
   }
 }
 
 /**
- * 非同期バッチ処理実行
- * Vercel Functionsのタイムアウトを回避するため、段階的に処理
+ * スケジュールが実行すべきかチェック
  */
-async function executeBatchProcessAsync(executionId: string): Promise<void> {
+function shouldExecuteSchedule(cronExpression: string): boolean {
+  const now = new Date();
+  const [minute, hour, day, month, dayOfWeek] = cronExpression.split(' ');
+  
+  // 簡易的なcron式チェック（実際の実装ではcron-parserライブラリを使用）
+  const currentMinute = now.getMinutes();
+  const currentHour = now.getHours();
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth() + 1; // getMonth()は0ベース
+  const currentDayOfWeek = now.getDay(); // 0=日曜日
+
+  return (
+    matchesCronField(currentMinute, minute) &&
+    matchesCronField(currentHour, hour) &&
+    matchesCronField(currentDay, day) &&
+    matchesCronField(currentMonth, month) &&
+    matchesCronField(currentDayOfWeek, dayOfWeek)
+  );
+}
+
+/**
+ * cronフィールドのマッチング
+ */
+function matchesCronField(value: number, field: string): boolean {
+  if (field === '*') return true;
+  if (field.includes(',')) {
+    return field.split(',').some(v => parseInt(v) === value);
+  }
+  if (field.includes('/')) {
+    const [range, step] = field.split('/');
+    const stepValue = parseInt(step);
+    if (range === '*') {
+      return value % stepValue === 0;
+    }
+  }
+  if (field.includes('-')) {
+    const [start, end] = field.split('-').map(v => parseInt(v));
+    return value >= start && value <= end;
+  }
+  return parseInt(field) === value;
+}
+
+/**
+ * 非同期バッチ処理実行
+ */
+async function executeBatchProcessAsync(executionId: string, scheduleId: string): Promise<void> {
   const log = (message: string) => {
     console.log(`[Batch ${executionId}] ${message}`);
     logger.info(message, 'BatchProcess');
   };
 
   try {
-    log('バッチ処理を開始します...');
+    log('スケジュール実行によるバッチ処理を開始します...');
 
     // 1. APIキーの確認
     const apiKey = process.env.VITE_RAPIDAPI_KEY;

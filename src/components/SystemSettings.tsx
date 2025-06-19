@@ -3,6 +3,7 @@ import { X, Save } from 'lucide-react';
 import { getApiSettings, saveApiSettings } from '../lib/api';
 import { TabType } from './SystemSettings/types';
 import { TabList } from './SystemSettings/TabList';
+import { TabContent } from './SystemSettings/TabContent';
 import { BatchSettings } from './SystemSettings/BatchSettings';
 import { RapidApiSettings } from './SystemSettings/RapidApiSettings';
 import { OpenAiSettings } from './SystemSettings/OpenAiSettings';
@@ -10,6 +11,7 @@ import { SuccessPopup } from './SystemSettings/SuccessPopup';
 import { ApiRequestSettings } from './SystemSettings/ApiRequestSettings';
 import { ErrorDialog } from './ErrorDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { BatchScheduleSettings } from './SystemSettings/BatchScheduleSettings';
 
 interface SystemSettingsProps {
   isOpen: boolean;
@@ -316,6 +318,12 @@ export function SystemSettings({ isOpen, onClose }: SystemSettingsProps) {
           
           {activeTab === 'openai' && (
             <OpenAiSettings
+              isLoading={isLoading}
+            />
+          )}
+          
+          {activeTab === 'schedule' && (
+            <BatchScheduleSettings
               isLoading={isLoading}
             />
           )}

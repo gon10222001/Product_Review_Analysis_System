@@ -1,4 +1,4 @@
-export type TabType = 'batch' | 'api' | 'openai';
+export type TabType = 'batch' | 'api' | 'openai' | 'schedule';
 
 export interface SystemSettingsProps {
   isOpen: boolean;
